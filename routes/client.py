@@ -18,14 +18,16 @@ def db():
 def my_projects():
     conn = db()
     client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
-    rows = conn.execute("""
-        SELECT p.*, s.name as staff_name
-        FROM projects p
-        LEFT JOIN users s ON s.id = p.staff_id
-        WHERE p.client_id = ?
-        ORDER BY p.created_at DESC
-    """, (client_id,)).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute("""
+            SELECT p.*, s.name as staff_name
+            FROM projects p
+            LEFT JOIN users s ON s.id = p.staff_id
+            WHERE p.client_id = ?
+            ORDER BY p.created_at DESC
+        """, (client_id,)).fetchall()
+    finally:
+        conn.close()
     return jsonify([dict(r) for r in rows])
 
 
@@ -34,11 +36,13 @@ def my_projects():
 def my_requests():
     conn = db()
     client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
-    rows = conn.execute(
-        "SELECT * FROM service_requests WHERE client_id=? ORDER BY created_at DESC LIMIT 50",
-        (client_id,),
-    ).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM service_requests WHERE client_id=? ORDER BY created_at DESC LIMIT 50",
+            (client_id,),
+        ).fetchall()
+    finally:
+        conn.close()
     return jsonify([dict(r) for r in rows])
 
 
@@ -56,26 +60,26 @@ def create_request():
         return jsonify({"error": "prompt required"}), 400
 
     conn = db()
-    cur = conn.execute(
-        "INSERT INTO service_requests (client_id, project_id, type, prompt) VALUES (?, ?, ?, ?)",
-        (g.user["id"], project_id, req_type, prompt),
-    )
-    conn.commit()
-    rid = cur.lastrowid
+    try:
+        cur = conn.execute(
+            "INSERT INTO service_requests (client_id, project_id, type, prompt) VALUES (?, ?, ?, ?)",
+            (g.user["id"], project_id, req_type, prompt),
+        )
+        conn.commit()
+        rid = cur.lastrowid
 
-    # Collect notify targets: assigned staff (if project) + admin email from config
-    notify = []
-    if project_id:
-        row = conn.execute(
-            "SELECT s.email FROM projects p JOIN users s ON s.id = p.staff_id WHERE p.id=? AND p.staff_id IS NOT NULL",
-            (project_id,),
-        ).fetchone()
-        if row:
-            notify.append(row["email"])
-    if Config.NOTIFY_ADMIN_EMAIL and Config.NOTIFY_ADMIN_EMAIL not in notify:
-        notify.append(Config.NOTIFY_ADMIN_EMAIL)
-
-    conn.close()
+        notify = []
+        if project_id:
+            row = conn.execute(
+                "SELECT s.email FROM projects p JOIN users s ON s.id = p.staff_id WHERE p.id=? AND p.staff_id IS NOT NULL",
+                (project_id,),
+            ).fetchone()
+            if row:
+                notify.append(row["email"])
+        if Config.NOTIFY_ADMIN_EMAIL and Config.NOTIFY_ADMIN_EMAIL not in notify:
+            notify.append(Config.NOTIFY_ADMIN_EMAIL)
+    finally:
+        conn.close()
 
     email_service.notify_new_request(
         client_name=g.user["name"],
@@ -93,9 +97,11 @@ def create_request():
 def list_conversations():
     conn = db()
     client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
-    rows = conn.execute(
-        "SELECT id, title, created_at, updated_at FROM conversations WHERE client_id=? ORDER BY updated_at DESC",
-        (client_id,),
-    ).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute(
+            "SELECT id, title, created_at, updated_at FROM conversations WHERE client_id=? ORDER BY updated_at DESC",
+            (client_id,),
+        ).fetchall()
+    finally:
+        conn.close()
     return jsonify([dict(r) for r in rows])

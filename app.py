@@ -1,4 +1,5 @@
-from flask import Flask, send_from_directory, redirect
+import re
+from flask import Flask, send_from_directory, redirect, abort
 from flask_cors import CORS
 from config import Config
 
@@ -40,22 +41,29 @@ def dashboard():
     return render_template("dashboard_router.html")
 
 
+def _safe_page(page: str) -> str:
+    """Allow only simple alphanumeric page names — no path traversal."""
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", page):
+        abort(404)
+    return page
+
+
 @app.get("/admin/<path:page>")
 def admin_pages(page):
     from flask import render_template
-    return render_template(f"admin/{page}.html")
+    return render_template(f"admin/{_safe_page(page)}.html")
 
 
 @app.get("/staff/<path:page>")
 def staff_pages(page):
     from flask import render_template
-    return render_template(f"staff/{page}.html")
+    return render_template(f"staff/{_safe_page(page)}.html")
 
 
 @app.get("/client/<path:page>")
 def client_pages(page):
     from flask import render_template
-    return render_template(f"client/{page}.html")
+    return render_template(f"client/{_safe_page(page)}.html")
 
 
 @app.get("/profile")

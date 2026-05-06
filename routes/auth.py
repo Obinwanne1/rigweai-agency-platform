@@ -10,11 +10,13 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 def _get_user_by_email(email: str):
     conn = sqlite3.connect(Config.DB_PATH)
     conn.row_factory = sqlite3.Row
-    row = conn.execute(
-        "SELECT id, email, name, role, password_hash, is_active FROM users WHERE email = ?",
-        (email,),
-    ).fetchone()
-    conn.close()
+    try:
+        row = conn.execute(
+            "SELECT id, email, name, role, password_hash, is_active FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+    finally:
+        conn.close()
     return dict(row) if row else None
 
 
@@ -37,7 +39,13 @@ def login():
     resp = make_response(
         jsonify({"token": token, "user": {"id": user["id"], "name": user["name"], "role": user["role"], "email": user["email"]}})
     )
-    resp.set_cookie("token", token, httponly=True, samesite="Lax", max_age=86400)
+    resp.set_cookie(
+        "token", token,
+        httponly=True,
+        samesite="Lax",
+        secure=not Config.DEBUG,
+        max_age=Config.JWT_EXPIRY_HOURS * 3600,
+    )
     return resp
 
 
@@ -68,12 +76,12 @@ def change_password():
 
     conn = sqlite3.connect(Config.DB_PATH)
     conn.row_factory = sqlite3.Row
-    row = conn.execute("SELECT password_hash FROM users WHERE id=?", (g.user["id"],)).fetchone()
-    if not row or not verify_password(current, row["password_hash"]):
+    try:
+        row = conn.execute("SELECT password_hash FROM users WHERE id=?", (g.user["id"],)).fetchone()
+        if not row or not verify_password(current, row["password_hash"]):
+            return jsonify({"error": "Current password is incorrect"}), 401
+        conn.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pw), g.user["id"]))
+        conn.commit()
+    finally:
         conn.close()
-        return jsonify({"error": "Current password is incorrect"}), 401
-
-    conn.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pw), g.user["id"]))
-    conn.commit()
-    conn.close()
     return jsonify({"message": "Password changed successfully"})
