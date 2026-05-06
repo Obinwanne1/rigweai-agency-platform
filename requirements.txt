@@ -1,0 +1,10 @@
+flask>=3.0
+flask-cors
+anthropic>=0.40
+pyjwt
+bcrypt
+pdfplumber
+python-docx
+pillow
+pytest
+python-dotenv

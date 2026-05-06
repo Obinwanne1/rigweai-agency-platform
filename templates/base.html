@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RigweAI Agency{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      RigweAI<br>
+      <span>Agency Platform</span>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      {% block sidebar %}{% endblock %}
+    </nav>
+    <div class="sidebar-footer">
+      <strong id="nav-user-name">—</strong>
+      <span id="nav-user-role"></span>
+      <a href="/profile" style="display:block; font-size:0.8rem; color:rgba(255,255,255,0.7); margin-top:6px; text-decoration:none;">⚙ Change Password</a>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+      <div class="flex-gap">{% block topbar_actions %}{% endblock %}</div>
+    </div>
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+  // Populate nav user info from JWT
+  (async () => {
+    try {
+      const user = await API.get("/api/auth/me");
+      document.getElementById("nav-user-name").textContent = user.name;
+      document.getElementById("nav-user-role").textContent = user.role;
+    } catch {}
+  })();
+</script>
+<script src="/static/js/auth.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

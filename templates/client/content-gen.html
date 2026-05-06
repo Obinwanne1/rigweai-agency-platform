@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Content Generator — RigweAI Agency{% endblock %}
+{% block page_title %}Content Generator{% endblock %}
+
+{% block sidebar %}
+<span class="nav-section">My Portal</span>
+<a href="/client/dashboard" class="nav-link"><span class="icon">◼</span> Dashboard</a>
+<span class="nav-section">AI Tools</span>
+<a href="/client/content-gen" class="nav-link active"><span class="icon">✏️</span> Content Generator</a>
+<a href="/client/chat" class="nav-link"><span class="icon">💬</span> AI Chat</a>
+<a href="/client/file-processor" class="nav-link"><span class="icon">📄</span> File Processor</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <div>
+    <div class="card">
+      <div class="card-title">Your Brief</div>
+      <div class="form-group">
+        <label class="form-label">What do you need?</label>
+        <textarea class="form-textarea" id="prompt" rows="6" placeholder="e.g. Write a LinkedIn post about our new AI automation service. Keep it professional, 150 words."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Additional Context <span class="text-muted">(optional)</span></label>
+        <textarea class="form-textarea" id="context" rows="3" placeholder="Brand voice, target audience, keywords…"></textarea>
+      </div>
+      <div id="gen-error" class="login-error"></div>
+      <button class="btn btn-primary" id="gen-btn" onclick="generate()" style="width:100%; justify-content:center;">
+        <span id="gen-spinner" class="spinner hidden"></span>
+        <span id="gen-btn-text">Generate Content</span>
+      </button>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="height:100%;">
+      <div class="flex-between mb-16">
+        <div class="card-title" style="margin:0;">Output</div>
+        <button class="btn btn-secondary btn-sm" id="copy-btn" onclick="copyOutput()" style="display:none;">Copy</button>
+      </div>
+      <div class="ai-output" id="output">Your generated content will appear here…</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/ai-tools.js"></script>
+{% endblock %}

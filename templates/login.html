@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — RigweAI Agency</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>RigweAI Agency</h1>
+      <p>Sign in to your account</p>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-input" type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:11px 16px; margin-top:8px;">
+        <span id="btn-spinner" class="spinner hidden"></span>
+        <span id="btn-text">Sign In</span>
+      </button>
+    </form>
+    <div style="text-align:center; margin-top:16px;">
+      <a href="/forgot-password" style="font-size:0.85rem; color:#448440; text-decoration:none;">Forgot password?</a>
+    </div>
+  </div>
+</div>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/auth.js"></script>
+</body>
+</html>

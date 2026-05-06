@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Change Password — RigweAI Agency{% endblock %}
+{% block page_title %}Change Password{% endblock %}
+
+{% block sidebar %}
+<a href="/dashboard" class="nav-link"><span class="icon">◼</span> Dashboard</a>
+<a href="/profile" class="nav-link active"><span class="icon">⚙</span> Change Password</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;">
+  <div class="card">
+    <div class="card-title">Change Your Password</div>
+    <form id="change-pw-form">
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input class="form-input" type="password" name="current_password" required autocomplete="current-password" placeholder="Your current password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input class="form-input" type="password" name="new_password" required autocomplete="new-password" placeholder="Min 8 characters" minlength="8">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input class="form-input" type="password" name="confirm_password" required autocomplete="new-password" placeholder="Repeat new password">
+      </div>
+      <div id="pw-error" class="login-error"></div>
+      <div id="pw-success" style="display:none; background:#dcf0e5; color:#1a7a40; padding:10px 14px; border-radius:8px; font-size:0.88rem; margin-bottom:16px;">
+        Password changed successfully.
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">
+        <span id="pw-spinner" class="spinner hidden"></span>
+        <span id="pw-btn-text">Update Password</span>
+      </button>
+    </form>
+  </div>
+
+  <div class="card mt-24">
+    <div class="card-title">Password Tips</div>
+    <ul style="font-size:0.88rem; color:#555; line-height:1.8; padding-left:18px;">
+      <li>Use at least 8 characters</li>
+      <li>Mix uppercase, lowercase, numbers, symbols</li>
+      <li>Don't reuse passwords across sites</li>
+      <li>Use a password manager</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("change-pw-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById("pw-error");
+  const successEl = document.getElementById("pw-success");
+  const spinner = document.getElementById("pw-spinner");
+  const btnText = document.getElementById("pw-btn-text");
+
+  errEl.style.display = "none";
+  successEl.style.display = "none";
+
+  const newPw = form.new_password.value;
+  const confirm = form.confirm_password.value;
+  if (newPw !== confirm) {
+    errEl.textContent = "New passwords do not match.";
+    errEl.style.display = "block";
+    return;
+  }
+
+  spinner.classList.remove("hidden");
+  btnText.textContent = "Updating…";
+  form.querySelector("button").disabled = true;
+
+  try {
+    await API.post("/api/auth/change-password", {
+      current_password: form.current_password.value,
+      new_password: newPw,
+    });
+    successEl.style.display = "block";
+    form.reset();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to change password.";
+    errEl.style.display = "block";
+  } finally {
+    spinner.classList.add("hidden");
+    btnText.textContent = "Update Password";
+    form.querySelector("button").disabled = false;
+  }
+});
+</script>
+{% endblock %}

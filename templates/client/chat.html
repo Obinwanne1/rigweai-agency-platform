@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}AI Chat — RigweAI Agency{% endblock %}
+{% block page_title %}AI Chat{% endblock %}
+
+{% block sidebar %}
+<span class="nav-section">My Portal</span>
+<a href="/client/dashboard" class="nav-link"><span class="icon">◼</span> Dashboard</a>
+<span class="nav-section">AI Tools</span>
+<a href="/client/content-gen" class="nav-link"><span class="icon">✏️</span> Content Generator</a>
+<a href="/client/chat" class="nav-link active"><span class="icon">💬</span> AI Chat</a>
+<a href="/client/file-processor" class="nav-link"><span class="icon">📄</span> File Processor</a>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-secondary btn-sm" onclick="newConversation()">+ New Chat</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="height: calc(100vh - 140px);">
+  <div style="display:flex; flex-direction:column; height:100%;">
+    <div class="card" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+      <div class="card-title">Conversation</div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg assistant">Hello! I'm the RigweAI assistant. How can I help you today?</div>
+      </div>
+      <div class="chat-input-row mt-16">
+        <input class="form-input" id="chat-input" placeholder="Type your message…" onkeydown="chatKeydown(event)">
+        <button class="btn btn-primary" id="chat-send" onclick="sendMessage()">
+          <span id="chat-spinner" class="spinner hidden"></span>
+          <span id="chat-btn-text">Send</span>
+        </button>
+      </div>
+      <div id="chat-error" class="login-error mt-16"></div>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title">Chat History</div>
+      <div id="conv-list" style="display:flex; flex-direction:column; gap:8px;">
+        <div class="text-muted">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/ai-tools.js"></script>
+<script>loadChatPage();</script>
+{% endblock %}
