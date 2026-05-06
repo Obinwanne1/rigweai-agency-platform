@@ -16,3 +16,11 @@ class Config:
     ALLOWED_EXTENSIONS = {"pdf", "txt", "docx", "png", "jpg", "jpeg", "csv"}
     CLAUDE_MODEL = "claude-sonnet-4-6"
     DEBUG = FLASK_ENV == "development"
+    # SMTP (optional — leave blank to disable email)
+    SMTP_HOST = os.getenv("SMTP_HOST", "")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASS = os.getenv("SMTP_PASS", "")
+    SMTP_FROM = os.getenv("SMTP_FROM", "noreply@rigweai.com")
+    SMTP_TLS = os.getenv("SMTP_TLS", "true").lower() == "true"
+    NOTIFY_ADMIN_EMAIL = os.getenv("NOTIFY_ADMIN_EMAIL", "")

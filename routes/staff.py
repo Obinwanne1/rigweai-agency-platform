@@ -1,6 +1,7 @@
 import sqlite3
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
+from services import email_service
 from config import Config
 
 staff_bp = Blueprint("staff", __name__, url_prefix="/api/staff")
@@ -84,5 +85,20 @@ def update_request(rid):
         vals.append(rid)
         conn.execute(f"UPDATE service_requests SET {', '.join(fields)} WHERE id=?", vals)
         conn.commit()
+
+    # Email client when marked completed
+    if data.get("status") == "completed":
+        client_row = conn.execute(
+            "SELECT u.email, u.name FROM users u JOIN service_requests sr ON sr.client_id = u.id WHERE sr.id=?",
+            (rid,),
+        ).fetchone()
+        if client_row:
+            email_service.notify_request_completed(
+                client_email=client_row["email"],
+                client_name=client_row["name"],
+                req_type=dict(req_row)["type"],
+                request_id=rid,
+            )
+
     conn.close()
     return jsonify({"message": "Updated"})

@@ -1,6 +1,7 @@
 import sqlite3
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
+from services import email_service
 from config import Config
 
 client_bp = Blueprint("client", __name__, url_prefix="/api/client")
@@ -61,7 +62,29 @@ def create_request():
     )
     conn.commit()
     rid = cur.lastrowid
+
+    # Collect notify targets: assigned staff (if project) + admin email from config
+    notify = []
+    if project_id:
+        row = conn.execute(
+            "SELECT s.email FROM projects p JOIN users s ON s.id = p.staff_id WHERE p.id=? AND p.staff_id IS NOT NULL",
+            (project_id,),
+        ).fetchone()
+        if row:
+            notify.append(row["email"])
+    if Config.NOTIFY_ADMIN_EMAIL and Config.NOTIFY_ADMIN_EMAIL not in notify:
+        notify.append(Config.NOTIFY_ADMIN_EMAIL)
+
     conn.close()
+
+    email_service.notify_new_request(
+        client_name=g.user["name"],
+        req_type=req_type,
+        prompt=prompt,
+        request_id=rid,
+        notify_emails=notify,
+    )
+
     return jsonify({"id": rid, "message": "Request submitted"}), 201
 
 
