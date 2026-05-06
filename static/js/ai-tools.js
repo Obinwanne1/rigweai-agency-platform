@@ -51,19 +51,33 @@ function renderConvList(convs) {
   const el = document.getElementById("conv-list");
   if (!el) return;
   if (!convs.length) { el.innerHTML = '<div class="text-muted">No previous chats.</div>'; return; }
-  el.innerHTML = convs.map(c => `
-    <button class="btn btn-secondary btn-sm" style="text-align:left; justify-content:flex-start;" onclick="loadConversation(${c.id})">
-      ${c.title || "Conversation " + c.id}
-      <span class="text-muted" style="margin-left:auto; font-size:0.75rem;">${new Date(c.updated_at + "Z").toLocaleDateString()}</span>
-    </button>
-  `).join("");
+  el.innerHTML = convs.map(c => {
+    const d = new Date(c.updated_at + "Z");
+    const dateStr = d.toLocaleDateString();
+    const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return `
+    <button class="btn btn-secondary btn-sm" style="text-align:left; justify-content:flex-start; flex-direction:column; align-items:flex-start; gap:2px;" onclick="loadConversation(${c.id})">
+      <span style="font-weight:500;">${c.title || "Conversation " + c.id}</span>
+      <span class="text-muted" style="font-size:0.75rem;">${dateStr} ${timeStr}</span>
+    </button>`;
+  }).join("");
 }
 
 async function loadConversation(id) {
-  // just set ID; history is server-side
   _conversationId = id;
   const msgs = document.getElementById("chat-messages");
-  msgs.innerHTML = '<div class="chat-msg assistant">Conversation loaded. Continue chatting below.</div>';
+  msgs.innerHTML = '<div class="chat-msg assistant">Loading…</div>';
+  try {
+    const data = await API.get(`/api/ai/conversations/${id}`);
+    msgs.innerHTML = "";
+    if (!data.messages.length) {
+      msgs.innerHTML = '<div class="chat-msg assistant">No messages yet. Start chatting below.</div>';
+      return;
+    }
+    data.messages.forEach(m => appendMsg(msgs, m.role, m.content));
+  } catch (err) {
+    msgs.innerHTML = '<div class="chat-msg assistant">Failed to load conversation.</div>';
+  }
 }
 
 function newConversation() {

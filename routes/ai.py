@@ -14,6 +14,22 @@ def db():
     return conn
 
 
+@ai_bp.get("/conversations/<int:cid>")
+@require_role("client", "staff", "admin")
+def get_conversation(cid):
+    conn = db()
+    try:
+        row = conn.execute(
+            "SELECT id, title, messages FROM conversations WHERE id=? AND client_id=?",
+            (cid, g.user["id"]),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify({"id": row["id"], "title": row["title"], "messages": json.loads(row["messages"])})
+
+
 @ai_bp.post("/generate")
 @require_role("client", "staff", "admin")
 def generate():
@@ -83,9 +99,10 @@ def chat():
                 (json.dumps(history), conversation_id),
             )
         else:
+            title = message[:60] + ("…" if len(message) > 60 else "")
             cur = conn.execute(
-                "INSERT INTO conversations (client_id, messages) VALUES (?,?)",
-                (g.user["id"], json.dumps(history)),
+                "INSERT INTO conversations (client_id, title, messages) VALUES (?,?,?)",
+                (g.user["id"], title, json.dumps(history)),
             )
             conversation_id = cur.lastrowid
 
