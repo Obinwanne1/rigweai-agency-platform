@@ -1,11 +1,30 @@
 // Admin panel JS
 
-function badge(role) {
-  const map = { admin: "badge-admin", staff: "badge-staff", client: "badge-client",
-                active: "badge-active", inactive: "badge-paused",
-                completed: "badge-completed", pending: "badge-pending",
-                failed: "badge-failed", paused: "badge-paused" };
-  return `<span class="badge ${map[role] || ''}">${role}</span>`;
+const STATUS_OPTIONS = ["active","assigned","work_in_progress","completed","paused","cancelled"];
+
+function badge(v) {
+  const map = {
+    admin:"badge-admin", staff:"badge-staff", client:"badge-client",
+    active:"badge-active", inactive:"badge-paused",
+    assigned:"badge-staff", work_in_progress:"badge-staff",
+    completed:"badge-completed", pending:"badge-pending",
+    failed:"badge-failed", paused:"badge-paused", cancelled:"badge-paused"
+  };
+  return `<span class="badge ${map[v]||''}">${v.replace(/_/g," ")}</span>`;
+}
+
+function statusSelect(pid, current) {
+  const opts = STATUS_OPTIONS.map(s =>
+    `<option value="${s}" ${s===current?"selected":""}>${s.replace(/_/g," ")}</option>`
+  ).join("");
+  return `<select class="form-select" style="font-size:0.8rem;padding:4px 8px;" onchange="updateProjectStatus(${pid},this.value)">${opts}</select>`;
+}
+
+function memberBadges(members) {
+  if (!members || !members.length) return '<span class="text-muted">—</span>';
+  return members.map(m =>
+    `<span class="badge ${m.member_role==='staff'?'badge-staff':'badge-client'}" title="${m.email}">${m.name}</span>`
+  ).join(" ");
 }
 
 function fmtDate(s) {
@@ -13,13 +32,8 @@ function fmtDate(s) {
   return new Date(s + "Z").toLocaleDateString();
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove("open");
-}
-
-function openModal(id) {
-  document.getElementById(id).classList.add("open");
-}
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+function openModal(id)  { document.getElementById(id).classList.add("open"); }
 
 // ── Dashboard ──────────────────────────────────────────────────────────
 async function loadDashboard() {
@@ -77,69 +91,10 @@ function openCreateUser() {
   openModal("create-user-modal");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const createForm = document.getElementById("create-user-form");
-  if (createForm) {
-    createForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fd = new FormData(createForm);
-      const body = Object.fromEntries(fd);
-      const errEl = document.getElementById("create-user-error");
-      try {
-        await API.post("/api/admin/users", body);
-        closeModal("create-user-modal");
-        loadUsers();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.style.display = "block";
-      }
-    });
-  }
-
-  const editForm = document.getElementById("edit-user-form");
-  if (editForm) {
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fd = new FormData(editForm);
-      const id = fd.get("id");
-      const body = { name: fd.get("name"), role: fd.get("role"), is_active: fd.get("is_active") === "1" };
-      if (fd.get("password")) body.password = fd.get("password");
-      const errEl = document.getElementById("edit-user-error");
-      try {
-        await API.patch(`/api/admin/users/${id}`, body);
-        closeModal("edit-user-modal");
-        loadUsers();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.style.display = "block";
-      }
-    });
-  }
-
-  const createProjectForm = document.getElementById("create-project-form");
-  if (createProjectForm) {
-    createProjectForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fd = new FormData(createProjectForm);
-      const body = { title: fd.get("title"), description: fd.get("description"), client_id: parseInt(fd.get("client_id")), staff_id: fd.get("staff_id") ? parseInt(fd.get("staff_id")) : null };
-      const errEl = document.getElementById("create-project-error");
-      try {
-        await API.post("/api/admin/projects", body);
-        closeModal("create-project-modal");
-        loadProjects();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.style.display = "block";
-      }
-    });
-  }
-});
-
 function openEditUser(id) {
   const u = _users.find(x => x.id === id);
   if (!u) return;
   const form = document.getElementById("edit-user-form");
-  form.id_field = id;
   form.querySelector('[name="id"]').value = id;
   form.querySelector('[name="name"]').value = u.name;
   form.querySelector('[name="role"]').value = u.role;
@@ -160,24 +115,29 @@ async function deleteUser(id) {
 }
 
 // ── Projects ───────────────────────────────────────────────────────────
+let _allUsers = [];
+
 async function loadProjects() {
   const [projects, users] = await Promise.all([
     API.get("/api/admin/projects").catch(() => []),
     API.get("/api/admin/users").catch(() => []),
   ]);
+  _allUsers = users;
 
   const tbody = document.getElementById("projects-tbody");
   if (tbody) {
-    if (!projects.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No projects.</td></tr>'; }
-    else {
+    if (!projects.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No projects.</td></tr>';
+    } else {
       tbody.innerHTML = projects.map(p => `
         <tr>
-          <td>${p.title}</td>
+          <td><strong>${p.title}</strong>${p.description ? `<br><small class="text-muted">${p.description}</small>` : ""}</td>
           <td>${p.client_name || "—"}</td>
-          <td>${p.staff_name || "Unassigned"}</td>
-          <td>${badge(p.status)}</td>
+          <td class="members-cell">${memberBadges(p.members)}</td>
+          <td>${statusSelect(p.id, p.status)}</td>
           <td>${fmtDate(p.created_at)}</td>
           <td class="flex-gap">
+            <button class="btn btn-secondary btn-sm" onclick="openMembersModal(${p.id})">Members</button>
             <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">Delete</button>
           </td>
         </tr>
@@ -185,14 +145,33 @@ async function loadProjects() {
     }
   }
 
-  // Populate selects
+  // Populate create-modal selects
   const clientSel = document.getElementById("client-select");
-  const staffSel = document.getElementById("staff-select");
-  if (clientSel && staffSel) {
+  const staffSel  = document.getElementById("staff-select");
+  if (clientSel) {
     const clients = users.filter(u => u.role === "client");
+    clientSel.innerHTML = '<option value="">Select client…</option>' +
+      clients.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+  }
+  if (staffSel) {
     const staff = users.filter(u => u.role === "staff" || u.role === "admin");
-    clientSel.innerHTML = '<option value="">Select client…</option>' + clients.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
-    staffSel.innerHTML = '<option value="">Unassigned</option>' + staff.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+    staffSel.innerHTML = staff.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+  }
+
+  // Populate add-member select
+  const addSel = document.getElementById("add-member-user");
+  if (addSel) {
+    addSel.innerHTML = '<option value="">Select user…</option>' +
+      users.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join("");
+  }
+}
+
+async function updateProjectStatus(pid, status) {
+  try {
+    await API.patch(`/api/admin/projects/${pid}`, { status });
+  } catch (err) {
+    alert("Failed to update status: " + err.message);
+    loadProjects();
   }
 }
 
@@ -200,7 +179,7 @@ function openCreateProject() {
   document.getElementById("create-project-form").reset();
   document.getElementById("create-project-error").style.display = "none";
   openModal("create-project-modal");
-  loadProjects(); // refresh selects
+  loadProjects();
 }
 
 async function deleteProject(id) {
@@ -212,3 +191,111 @@ async function deleteProject(id) {
     alert(err.message);
   }
 }
+
+// ── Members Modal ──────────────────────────────────────────────────────
+let _membersProjectId = null;
+
+async function openMembersModal(pid) {
+  _membersProjectId = pid;
+  document.getElementById("members-project-id").value = pid;
+  await refreshMembersList(pid);
+  openModal("members-modal");
+}
+
+async function refreshMembersList(pid) {
+  const projects = await API.get("/api/admin/projects").catch(() => []);
+  const p = projects.find(x => x.id === pid);
+  const members = p ? (p.members || []) : [];
+  const el = document.getElementById("members-list");
+  if (!members.length) {
+    el.innerHTML = '<span class="text-muted">No members yet.</span>';
+    return;
+  }
+  el.innerHTML = members.map(m => `
+    <div class="flex-between" style="padding:6px 0; border-bottom:1px solid var(--border);">
+      <span>${m.name} <span class="badge ${m.member_role==='staff'?'badge-staff':'badge-client'}">${m.member_role}</span></span>
+      <button class="btn btn-danger btn-sm" onclick="removeMember(${pid},${m.id})">Remove</button>
+    </div>
+  `).join("");
+}
+
+async function addMember() {
+  const uid  = parseInt(document.getElementById("add-member-user").value);
+  const role = document.getElementById("add-member-role").value;
+  if (!uid) return alert("Select a user first.");
+  try {
+    await API.post(`/api/admin/projects/${_membersProjectId}/members`, { user_id: uid, role });
+    await refreshMembersList(_membersProjectId);
+    loadProjects();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function removeMember(pid, uid) {
+  try {
+    await API.delete(`/api/admin/projects/${pid}/members/${uid}`);
+    await refreshMembersList(pid);
+    loadProjects();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ── Event listeners ────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("create-user-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const errEl = document.getElementById("create-user-error");
+    try {
+      await API.post("/api/admin/users", Object.fromEntries(fd));
+      closeModal("create-user-modal");
+      loadUsers();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = "block";
+    }
+  });
+
+  document.getElementById("edit-user-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const id = fd.get("id");
+    const body = { name: fd.get("name"), role: fd.get("role"), is_active: fd.get("is_active") === "1" };
+    if (fd.get("password")) body.password = fd.get("password");
+    const errEl = document.getElementById("edit-user-error");
+    try {
+      await API.patch(`/api/admin/users/${id}`, body);
+      closeModal("edit-user-modal");
+      loadUsers();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = "block";
+    }
+  });
+
+  document.getElementById("create-project-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const staffSel = document.getElementById("staff-select");
+    const selectedStaff = staffSel
+      ? Array.from(staffSel.selectedOptions).map(o => ({ user_id: parseInt(o.value), role: "staff" }))
+      : [];
+    const body = {
+      title: fd.get("title"),
+      description: fd.get("description"),
+      client_id: parseInt(fd.get("client_id")),
+      member_ids: selectedStaff,
+    };
+    const errEl = document.getElementById("create-project-error");
+    try {
+      await API.post("/api/admin/projects", body);
+      closeModal("create-project-modal");
+      loadProjects();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = "block";
+    }
+  });
+});

@@ -17,7 +17,16 @@
 <div class="card">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Title</th><th>Client</th><th>Staff</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Client</th>
+          <th>Members</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody id="projects-tbody"><tr><td colspan="6" class="text-muted">Loading…</td></tr></tbody>
     </table>
   </div>
@@ -25,7 +34,7 @@
 
 <!-- Create Project Modal -->
 <div class="modal-overlay" id="create-project-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:540px;">
     <div class="modal-title">New Project</div>
     <form id="create-project-form">
       <div class="form-group">
@@ -37,15 +46,14 @@
         <textarea class="form-textarea" name="description" rows="3" placeholder="Optional description"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Client</label>
+        <label class="form-label">Client <span class="text-muted">(primary owner)</span></label>
         <select class="form-select" name="client_id" id="client-select" required>
           <option value="">Select client…</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Assign Staff <span class="text-muted">(optional)</span></label>
-        <select class="form-select" name="staff_id" id="staff-select">
-          <option value="">Unassigned</option>
+        <label class="form-label">Assign Staff <span class="text-muted">(hold Ctrl/Cmd for multiple)</span></label>
+        <select class="form-select" name="staff_ids" id="staff-select" multiple style="min-height:90px;">
         </select>
       </div>
       <div id="create-project-error" class="login-error"></div>
@@ -54,6 +62,31 @@
         <button type="submit" class="btn btn-primary">Create</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Manage Members Modal -->
+<div class="modal-overlay" id="members-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Manage Members</div>
+    <input type="hidden" id="members-project-id">
+    <div id="members-list" style="margin-bottom:16px; min-height:40px;"></div>
+    <div style="border-top:1px solid var(--border); padding-top:16px;">
+      <div class="form-label" style="margin-bottom:8px;">Add member</div>
+      <div class="flex-gap">
+        <select class="form-select" id="add-member-user" style="flex:1;">
+          <option value="">Select user…</option>
+        </select>
+        <select class="form-select" id="add-member-role" style="width:110px;">
+          <option value="staff">Staff</option>
+          <option value="client">Client</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="addMember()">Add</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('members-modal')">Close</button>
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -16,6 +16,16 @@ def db():
     return conn
 
 
+def _project_members(conn, project_id):
+    rows = conn.execute("""
+        SELECT u.id, u.name, u.email, u.role as user_role, pm.role as member_role
+        FROM project_members pm
+        JOIN users u ON u.id = pm.user_id
+        WHERE pm.project_id = ?
+    """, (project_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 @client_bp.get("/projects")
 @require_role("client", "admin", "staff")
 def my_projects():
@@ -29,9 +39,14 @@ def my_projects():
             WHERE pm.user_id = ? AND pm.role = 'client'
             ORDER BY p.created_at DESC
         """, (uid,)).fetchall()
+        projects = []
+        for r in rows:
+            p = dict(r)
+            p["members"] = _project_members(conn, p["id"])
+            projects.append(p)
     finally:
         conn.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(projects)
 
 
 @client_bp.patch("/projects/<int:pid>/status")

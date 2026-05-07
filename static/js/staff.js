@@ -1,12 +1,34 @@
+// Staff panel JS
+
+const STATUS_OPTIONS = ["active","assigned","work_in_progress","completed","paused","cancelled"];
+
 function badge(v) {
-  const map = { admin:"badge-admin",staff:"badge-staff",client:"badge-client",active:"badge-active",
-    completed:"badge-completed",pending:"badge-pending",failed:"badge-failed",in_progress:"badge-staff",paused:"badge-paused" };
-  return `<span class="badge ${map[v]||''}">${v.replace("_"," ")}</span>`;
+  const map = {
+    admin:"badge-admin", staff:"badge-staff", client:"badge-client",
+    active:"badge-active", assigned:"badge-staff", work_in_progress:"badge-staff",
+    completed:"badge-completed", pending:"badge-pending",
+    failed:"badge-failed", in_progress:"badge-staff", paused:"badge-paused", cancelled:"badge-paused"
+  };
+  return `<span class="badge ${map[v]||''}">${v.replace(/_/g," ")}</span>`;
+}
+
+function statusSelect(pid, current) {
+  const opts = STATUS_OPTIONS.map(s =>
+    `<option value="${s}" ${s===current?"selected":""}>${s.replace(/_/g," ")}</option>`
+  ).join("");
+  return `<select class="form-select" style="font-size:0.8rem;padding:4px 8px;" onchange="updateProjectStatus(${pid},this.value)">${opts}</select>`;
+}
+
+function memberBadges(members) {
+  if (!members || !members.length) return '<span class="text-muted">—</span>';
+  return members.map(m =>
+    `<span class="badge ${m.member_role==='staff'?'badge-staff':'badge-client'}">${m.name}</span>`
+  ).join(" ");
 }
 
 function fmtDate(s) { return s ? new Date(s + "Z").toLocaleDateString() : "—"; }
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
-function openModal(id) { document.getElementById(id).classList.add("open"); }
+function openModal(id)  { document.getElementById(id).classList.add("open"); }
 
 let _currentProjectId = null;
 
@@ -31,15 +53,25 @@ async function loadStaffDashboard() {
 async function loadStaffProjects() {
   const projects = await API.get("/api/staff/projects").catch(() => []);
   const tbody = document.getElementById("projects-tbody");
-  if (!projects.length) { tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No projects.</td></tr>'; return; }
+  if (!projects.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No projects.</td></tr>'; return; }
   tbody.innerHTML = projects.map(p => `
     <tr>
       <td>${p.title}</td>
       <td>${p.client_name || "—"}</td>
-      <td>${badge(p.status)}</td>
+      <td class="members-cell">${memberBadges(p.members)}</td>
+      <td>${statusSelect(p.id, p.status)}</td>
       <td><button class="btn btn-secondary btn-sm" onclick="loadRequests(${p.id}, '${p.title.replace(/'/g,"\\'")}')">Requests</button></td>
     </tr>
   `).join("");
+}
+
+async function updateProjectStatus(pid, status) {
+  try {
+    await API.patch(`/api/staff/projects/${pid}/status`, { status });
+  } catch (err) {
+    alert("Failed to update status: " + err.message);
+    loadStaffProjects();
+  }
 }
 
 async function loadRequests(projectId, title) {
@@ -76,11 +108,9 @@ function openUpdateReq(id, status, output) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("update-req-form");
-  if (!form) return;
-  form.addEventListener("submit", async (e) => {
+  document.getElementById("update-req-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const fd = new FormData(form);
+    const fd = new FormData(e.target);
     try {
       await API.patch(`/api/staff/requests/${fd.get("id")}`, {
         status: fd.get("status"),
