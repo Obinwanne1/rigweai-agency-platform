@@ -24,5 +24,13 @@ One bug at a time. Read → fix → verify. No batching.
 ## File uploads
 Max 10MB. Allowed: pdf, docx, txt, csv, png, jpg, jpeg. Stored in `uploads/` (gitignored).
 
+## Pages
+- `/profile` — user profile/change-password
+- `/forgot-password` — forgot password flow
+
+## SMTP (optional)
+Set `SMTP_HOST` to enable email notifications. Leave blank to disable.
+Keys: `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_TLS`, `NOTIFY_ADMIN_EMAIL`.
+
 ## Ports
 Default: 5000. Read from `.env PORT=`.

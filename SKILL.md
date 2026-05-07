@@ -12,7 +12,7 @@ Full-stack AI agency platform. Flask 3 + SQLite + vanilla JS. JWT auth with 3 ro
 
 **Stack:** Python 3.11+, Flask 3, SQLite, Anthropic SDK (`claude-sonnet-4-6`), vanilla JS/HTML/CSS, JWT in httpOnly cookie.
 
-**Brand:** Primary `#4B5320` | Secondary `#FFFFFF` | Accent `#6B7B3A`
+**Brand:** Primary `#407E3C` | Secondary `#FFFFFF` | Accent `#5a9e56`
 
 ---
 
@@ -51,6 +51,8 @@ Full-stack AI agency platform. Flask 3 + SQLite + vanilla JS. JWT auth with 3 ro
 ### Auth
 - Login / logout with httpOnly JWT cookie
 - Change password (requires current password)
+- Forgot password page at `/forgot-password`
+- Profile page at `/profile`
 - Token expiry: 24h (configurable via `JWT_EXPIRY_HOURS`)
 - Cookie `secure=True` in production, `False` in dev
 
@@ -163,3 +165,9 @@ App runs at `http://localhost:5000`
 | `PORT` | No | `5000` | Server port |
 | `UPLOAD_MAX_MB` | No | `10` | Max file upload size |
 | `SMTP_HOST` | No | — | Leave blank to disable email |
+| `SMTP_PORT` | No | `587` | SMTP port |
+| `SMTP_USER` | No | — | SMTP username |
+| `SMTP_PASS` | No | — | SMTP password |
+| `SMTP_FROM` | No | `noreply@rigweai.com` | From address |
+| `SMTP_TLS` | No | `true` | Enable STARTTLS |
+| `NOTIFY_ADMIN_EMAIL` | No | — | Admin notification email |

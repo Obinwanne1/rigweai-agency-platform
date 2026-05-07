@@ -66,6 +66,35 @@ App runs at `http://localhost:5000`
 pytest tests/ -v
 ```
 
+## Pages
+
+| Route | Description |
+|---|---|
+| `/login` | Login |
+| `/dashboard` | Role-based redirect |
+| `/profile` | Change password / user info |
+| `/forgot-password` | Forgot password |
+| `/admin/<page>` | Admin portal pages |
+| `/staff/<page>` | Staff portal pages |
+| `/client/<page>` | Client portal pages |
+
+## Environment Variables
+
+| Key | Required | Default | Description |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key |
+| `JWT_SECRET` | Yes | — | Random 256-bit hex string |
+| `FLASK_ENV` | No | `development` | Set `production` in prod |
+| `PORT` | No | `5000` | Server port |
+| `UPLOAD_MAX_MB` | No | `10` | Max file upload size (MB) |
+| `SMTP_HOST` | No | — | SMTP server (leave blank to disable email) |
+| `SMTP_PORT` | No | `587` | SMTP port |
+| `SMTP_USER` | No | — | SMTP username |
+| `SMTP_PASS` | No | — | SMTP password |
+| `SMTP_FROM` | No | `noreply@rigweai.com` | From address |
+| `SMTP_TLS` | No | `true` | Enable STARTTLS |
+| `NOTIFY_ADMIN_EMAIL` | No | — | Admin notification address |
+
 ## Stack
 
 - Python 3.11+, Flask 3, SQLite
