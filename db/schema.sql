@@ -11,11 +11,19 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id INTEGER NOT NULL REFERENCES users(id),
-    staff_id INTEGER REFERENCES users(id),
     title TEXT NOT NULL,
     description TEXT,
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'completed', 'paused', 'cancelled')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'assigned', 'work_in_progress', 'completed', 'paused', 'cancelled')),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK(role IN ('client', 'staff')),
+    added_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(project_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS files (

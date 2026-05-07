@@ -7,7 +7,7 @@
 - Auth: JWT in httpOnly cookies
 
 ## Brand
-- Primary: `#4B5320` | Secondary: `#FFFFFF` | Accent: `#6B7B3A`
+- Primary: `#407E3C` | Secondary: `#FFFFFF` | Accent: `#5a9e56`
 
 ## DB
 - SQLite at `agency.db` (dev). Schema in `db/schema.sql`. Init via `python db/init_db.py`.

@@ -10,6 +10,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 def db():
     conn = sqlite3.connect(Config.DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -119,23 +120,35 @@ def delete_user(uid):
 
 
 # ── Projects ───────────────────────────────────────────────────────────
+def _project_members(conn, project_id):
+    rows = conn.execute("""
+        SELECT u.id, u.name, u.email, u.role as user_role, pm.role as member_role
+        FROM project_members pm
+        JOIN users u ON u.id = pm.user_id
+        WHERE pm.project_id = ?
+    """, (project_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 @admin_bp.get("/projects")
 @require_role("admin", "staff")
 def list_projects():
     conn = db()
     try:
         rows = conn.execute("""
-            SELECT p.*,
-                   c.name as client_name, c.email as client_email,
-                   s.name as staff_name
+            SELECT p.*, c.name as client_name, c.email as client_email
             FROM projects p
             LEFT JOIN users c ON c.id = p.client_id
-            LEFT JOIN users s ON s.id = p.staff_id
             ORDER BY p.created_at DESC
         """).fetchall()
+        projects = []
+        for r in rows:
+            p = dict(r)
+            p["members"] = _project_members(conn, p["id"])
+            projects.append(p)
     finally:
         conn.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(projects)
 
 
 @admin_bp.post("/projects")
@@ -145,7 +158,7 @@ def create_project():
     title = (data.get("title") or "").strip()
     client_id = data.get("client_id")
     description = (data.get("description") or "").strip()
-    staff_id = data.get("staff_id")
+    member_ids = data.get("member_ids") or []  # list of {user_id, role}
 
     if not title or not client_id:
         return jsonify({"error": "title and client_id required"}), 400
@@ -153,11 +166,26 @@ def create_project():
     conn = db()
     try:
         cur = conn.execute(
-            "INSERT INTO projects (client_id, staff_id, title, description) VALUES (?, ?, ?, ?)",
-            (client_id, staff_id, title, description),
+            "INSERT INTO projects (client_id, title, description) VALUES (?, ?, ?)",
+            (client_id, title, description),
         )
-        conn.commit()
         pid = cur.lastrowid
+
+        # Always add client as member
+        conn.execute(
+            "INSERT OR IGNORE INTO project_members (project_id, user_id, role) VALUES (?, ?, 'client')",
+            (pid, client_id),
+        )
+        # Add any extra members
+        for m in member_ids:
+            uid = m.get("user_id")
+            role = m.get("role", "staff")
+            if uid and role in ("client", "staff"):
+                conn.execute(
+                    "INSERT OR IGNORE INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)",
+                    (pid, uid, role),
+                )
+        conn.commit()
     finally:
         conn.close()
     return jsonify({"id": pid, "message": "Project created"}), 201
@@ -173,18 +201,65 @@ def update_project(pid):
         if not row:
             return jsonify({"error": "Not found"}), 404
 
+        valid_statuses = ("active", "assigned", "work_in_progress", "completed", "paused", "cancelled")
         fields, vals = [], []
-        for col in ("title", "description", "status", "staff_id"):
-            if col in data:
-                fields.append(f"{col}=?"); vals.append(data[col])
+        if "title" in data:
+            fields.append("title=?"); vals.append(data["title"])
+        if "description" in data:
+            fields.append("description=?"); vals.append(data["description"])
+        if "status" in data and data["status"] in valid_statuses:
+            fields.append("status=?"); vals.append(data["status"])
 
         if fields:
             vals.append(pid)
             conn.execute(f"UPDATE projects SET {', '.join(fields)} WHERE id=?", vals)
-            conn.commit()
+
+        conn.commit()
     finally:
         conn.close()
     return jsonify({"message": "Updated"})
+
+
+@admin_bp.post("/projects/<int:pid>/members")
+@require_role("admin", "staff")
+def add_member(pid):
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    role = data.get("role", "staff")
+
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+    if role not in ("client", "staff"):
+        return jsonify({"error": "role must be client or staff"}), 400
+
+    conn = db()
+    try:
+        if not conn.execute("SELECT id FROM projects WHERE id=?", (pid,)).fetchone():
+            return jsonify({"error": "Project not found"}), 404
+        if not conn.execute("SELECT id FROM users WHERE id=?", (user_id,)).fetchone():
+            return jsonify({"error": "User not found"}), 404
+        conn.execute(
+            "INSERT OR IGNORE INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)",
+            (pid, user_id, role),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Member added"}), 201
+
+
+@admin_bp.delete("/projects/<int:pid>/members/<int:uid>")
+@require_role("admin", "staff")
+def remove_member(pid, uid):
+    conn = db()
+    try:
+        conn.execute(
+            "DELETE FROM project_members WHERE project_id=? AND user_id=?", (pid, uid)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Member removed"})
 
 
 @admin_bp.delete("/projects/<int:pid>")

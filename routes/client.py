@@ -6,10 +6,13 @@ from config import Config
 
 client_bp = Blueprint("client", __name__, url_prefix="/api/client")
 
+VALID_STATUSES = ("active", "assigned", "work_in_progress", "completed", "paused", "cancelled")
+
 
 def db():
     conn = sqlite3.connect(Config.DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -17,18 +20,47 @@ def db():
 @require_role("client", "admin", "staff")
 def my_projects():
     conn = db()
-    client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
+    uid = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
     try:
         rows = conn.execute("""
-            SELECT p.*, s.name as staff_name
+            SELECT DISTINCT p.*
             FROM projects p
-            LEFT JOIN users s ON s.id = p.staff_id
-            WHERE p.client_id = ?
+            JOIN project_members pm ON pm.project_id = p.id
+            WHERE pm.user_id = ? AND pm.role = 'client'
             ORDER BY p.created_at DESC
-        """, (client_id,)).fetchall()
+        """, (uid,)).fetchall()
     finally:
         conn.close()
     return jsonify([dict(r) for r in rows])
+
+
+@client_bp.patch("/projects/<int:pid>/status")
+@require_role("client", "admin", "staff")
+def update_project_status(pid):
+    data = request.get_json(silent=True) or {}
+    status = data.get("status")
+    if status not in VALID_STATUSES:
+        return jsonify({"error": f"status must be one of {VALID_STATUSES}"}), 400
+
+    conn = db()
+    try:
+        if g.user["role"] == "client":
+            member = conn.execute(
+                "SELECT id FROM project_members WHERE project_id=? AND user_id=? AND role='client'",
+                (pid, g.user["id"]),
+            ).fetchone()
+            if not member:
+                return jsonify({"error": "Forbidden"}), 403
+
+        row = conn.execute("SELECT id FROM projects WHERE id=?", (pid,)).fetchone()
+        if not row:
+            return jsonify({"error": "Not found"}), 404
+
+        conn.execute("UPDATE projects SET status=? WHERE id=?", (status, pid))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Status updated"})
 
 
 @client_bp.get("/requests")
@@ -70,12 +102,13 @@ def create_request():
 
         notify = []
         if project_id:
-            row = conn.execute(
-                "SELECT s.email FROM projects p JOIN users s ON s.id = p.staff_id WHERE p.id=? AND p.staff_id IS NOT NULL",
-                (project_id,),
-            ).fetchone()
-            if row:
-                notify.append(row["email"])
+            # Notify all staff members on the project
+            staff_rows = conn.execute("""
+                SELECT u.email FROM project_members pm
+                JOIN users u ON u.id = pm.user_id
+                WHERE pm.project_id = ? AND pm.role = 'staff'
+            """, (project_id,)).fetchall()
+            notify = [r["email"] for r in staff_rows]
         if Config.NOTIFY_ADMIN_EMAIL and Config.NOTIFY_ADMIN_EMAIL not in notify:
             notify.append(Config.NOTIFY_ADMIN_EMAIL)
     finally:
