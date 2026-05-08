@@ -1,8 +1,7 @@
 from functools import wraps
-import sqlite3
 from flask import request, jsonify, g
 from services.auth_service import decode_token
-from config import Config
+from services.db import get_db
 import jwt
 
 
@@ -30,13 +29,11 @@ def require_role(*roles):
             if roles and payload["role"] not in roles:
                 return jsonify({"error": "Forbidden"}), 403
 
-            conn = sqlite3.connect(Config.DB_PATH)
-            conn.row_factory = sqlite3.Row
+            conn = get_db()
             row = conn.execute(
                 "SELECT id, email, name, role, is_active, must_change_password FROM users WHERE id = ?",
                 (int(payload["sub"]),),
             ).fetchone()
-            conn.close()
 
             if not row or not row["is_active"]:
                 return jsonify({"error": "Account inactive or not found"}), 401

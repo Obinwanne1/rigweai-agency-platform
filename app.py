@@ -1,14 +1,16 @@
 import re
-from flask import Flask, send_from_directory, redirect, abort, render_template
+from flask import Flask, redirect, abort, render_template
 from flask_cors import CORS
 from jinja2 import TemplateNotFound
 from config import Config
 from extensions import limiter
+from services.db import close_db
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = Config.UPLOAD_MAX_BYTES
 CORS(app, supports_credentials=True, origins=Config.CORS_ORIGINS)
 limiter.init_app(app)
+app.teardown_appcontext(close_db)
 
 # Register blueprints
 from routes.auth import auth_bp
@@ -34,13 +36,11 @@ def index():
 
 @app.get("/login")
 def login_page():
-    from flask import render_template
     return render_template("login.html")
 
 
 @app.get("/dashboard")
 def dashboard():
-    from flask import render_template
     return render_template("dashboard_router.html")
 
 
@@ -77,19 +77,16 @@ def client_pages(page):
 
 @app.get("/profile")
 def profile_page():
-    from flask import render_template
     return render_template("profile.html")
 
 
 @app.get("/forgot-password")
 def forgot_password_page():
-    from flask import render_template
     return render_template("forgot-password.html")
 
 
 @app.get("/reset-password")
 def reset_password_page():
-    from flask import render_template
     return render_template("reset-password.html")
 
 
