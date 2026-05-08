@@ -66,3 +66,29 @@ def test_stats_endpoint(client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert "users" in data and "projects" in data
+
+
+# ── Health check ───────────────────────────────────────────────────────
+
+def test_health_ok(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "ok"
+    assert data["db"] is True
+
+
+# ── Security headers ───────────────────────────────────────────────────
+
+def test_security_headers_present(client):
+    resp = client.get("/login")
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+    assert "Content-Security-Policy" in resp.headers
+    assert "Referrer-Policy" in resp.headers
+
+
+def test_csp_blocks_external_scripts(client):
+    csp = client.get("/login").headers.get("Content-Security-Policy", "")
+    assert "default-src 'self'" in csp
+    assert "frame-ancestors 'none'" in csp
