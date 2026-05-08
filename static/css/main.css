@@ -4,7 +4,8 @@
   --primary-light: #5a9e56;
   --primary-dark: #2f5e2c;
   --white: #ffffff;
-  --bg: #f5f6f0;
+  --bg: #f0f3e8;
+  --bg-gradient: linear-gradient(145deg, #eef1e4 0%, #e4ead4 50%, #edf2e0 100%);
   --bg-card: #ffffff;
   --text: #1a1a1a;
   --text-muted: #666;
@@ -16,13 +17,51 @@
   --shadow: 0 2px 8px rgba(75,83,32,0.12);
 }
 
+/* ── Dark mode ── */
+body.dark {
+  --bg: #151a12;
+  --bg-gradient: linear-gradient(145deg, #151a12 0%, #1a2016 50%, #151a12 100%);
+  --bg-card: #1e2419;
+  --white: #1e2419;
+  --text: #dde4cc;
+  --text-muted: #8a9478;
+  --border: #313d26;
+  --shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+body.dark .topbar { background: #1e2419; border-color: #313d26; }
+body.dark .topbar h1 { color: #dde4cc; }
+body.dark .modal { background: #1e2419; }
+body.dark th { background: #1a2016; color: #8a9478; }
+body.dark tr:hover td { background: #1a2016; }
+body.dark .form-input,
+body.dark .form-select,
+body.dark .form-textarea { background: #252e1e; color: #dde4cc; border-color: #313d26; }
+body.dark .ai-output { background: #1a2016; border-color: #313d26; color: #dde4cc; }
+body.dark .chat-messages { background: #1a2016; border-color: #313d26; }
+body.dark .chat-msg.assistant { background: #252e1e; border-color: #313d26; color: #dde4cc; }
+body.dark .login-page { background: var(--primary-dark); }
+body.dark .login-card { background: #1e2419; }
+body.dark .login-logo h1 { color: var(--primary-light); }
+body.dark .login-logo p { color: #8a9478; }
+body.dark .badge-admin { background: #2a3d22; color: #7bbf6a; }
+body.dark .badge-staff { background: #1e2a45; color: #6699ee; }
+body.dark .badge-client { background: #3d2e10; color: #d4a240; }
+body.dark .badge-active,
+body.dark .badge-completed { background: #1e3a28; color: #5ab87a; }
+body.dark .badge-pending { background: #3d2e10; color: #d4a240; }
+body.dark .badge-failed { background: #3d1515; color: #e07070; }
+body.dark .badge-paused { background: #2a2a2a; color: #999; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
 
 /* ── Layout ── */
@@ -344,6 +383,25 @@ tr:hover td { background: #f9f9f5; }
 .hidden { display: none !important; }
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Dark mode toggle ── */
+.btn-dark-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-dark-toggle:hover { background: var(--bg); border-color: var(--primary-light); color: var(--primary); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
