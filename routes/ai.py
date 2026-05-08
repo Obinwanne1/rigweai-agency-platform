@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import json
 from flask import Blueprint, request, jsonify, g
@@ -19,10 +20,16 @@ def db():
 def get_conversation(cid):
     conn = db()
     try:
-        row = conn.execute(
-            "SELECT id, title, messages FROM conversations WHERE id=? AND client_id=?",
-            (cid, g.user["id"]),
-        ).fetchone()
+        if g.user["role"] in ("admin", "staff"):
+            row = conn.execute(
+                "SELECT id, title, messages FROM conversations WHERE id=?",
+                (cid,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT id, title, messages FROM conversations WHERE id=? AND client_id=?",
+                (cid, g.user["id"]),
+            ).fetchone()
     finally:
         conn.close()
     if not row:
@@ -82,6 +89,8 @@ def chat():
             if row:
                 history = json.loads(row["messages"])
 
+        history = history[-38:]  # cap before API call — leaves room for user+assistant
+
         try:
             reply = claude_service.chat(history, message)
         except Exception as e:
@@ -89,7 +98,6 @@ def chat():
 
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": reply})
-        history = history[-40:]
 
         if conversation_id and conn.execute(
             "SELECT id FROM conversations WHERE id=? AND client_id=?", (conversation_id, g.user["id"])
@@ -143,6 +151,12 @@ def process_file():
             text, img_b64, media_type = file_service.extract_text(file_info)
             output = claude_service.analyze_file(text, instruction, img_b64, media_type)
         except Exception as e:
+            conn.execute("DELETE FROM files WHERE id=?", (file_id,))
+            conn.commit()
+            try:
+                os.remove(file_info["path"])
+            except OSError:
+                pass
             return jsonify({"error": str(e)}), 500
 
         conn.execute(

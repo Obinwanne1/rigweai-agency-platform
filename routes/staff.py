@@ -115,7 +115,9 @@ def update_request(rid):
         if not req_row:
             return jsonify({"error": "Not found"}), 404
 
-        if g.user["role"] == "staff" and req_row["project_id"]:
+        if g.user["role"] == "staff":
+            if not req_row["project_id"]:
+                return jsonify({"error": "Forbidden"}), 403
             member = conn.execute(
                 "SELECT id FROM project_members WHERE project_id=? AND user_id=? AND role='staff'",
                 (req_row["project_id"], g.user["id"]),

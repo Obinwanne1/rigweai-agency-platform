@@ -24,3 +24,4 @@ class Config:
     SMTP_FROM = os.getenv("SMTP_FROM", "noreply@rigweai.com")
     SMTP_TLS = os.getenv("SMTP_TLS", "true").lower() == "true"
     NOTIFY_ADMIN_EMAIL = os.getenv("NOTIFY_ADMIN_EMAIL", "")
+    CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5000").split(",") if o.strip()]

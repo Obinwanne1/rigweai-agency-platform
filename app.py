@@ -1,11 +1,12 @@
 import re
-from flask import Flask, send_from_directory, redirect, abort
+from flask import Flask, send_from_directory, redirect, abort, render_template
 from flask_cors import CORS
+from jinja2 import TemplateNotFound
 from config import Config
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = Config.UPLOAD_MAX_BYTES
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=Config.CORS_ORIGINS)
 
 # Register blueprints
 from routes.auth import auth_bp
@@ -50,20 +51,26 @@ def _safe_page(page: str) -> str:
 
 @app.get("/admin/<path:page>")
 def admin_pages(page):
-    from flask import render_template
-    return render_template(f"admin/{_safe_page(page)}.html")
+    try:
+        return render_template(f"admin/{_safe_page(page)}.html")
+    except TemplateNotFound:
+        abort(404)
 
 
 @app.get("/staff/<path:page>")
 def staff_pages(page):
-    from flask import render_template
-    return render_template(f"staff/{_safe_page(page)}.html")
+    try:
+        return render_template(f"staff/{_safe_page(page)}.html")
+    except TemplateNotFound:
+        abort(404)
 
 
 @app.get("/client/<path:page>")
 def client_pages(page):
-    from flask import render_template
-    return render_template(f"client/{_safe_page(page)}.html")
+    try:
+        return render_template(f"client/{_safe_page(page)}.html")
+    except TemplateNotFound:
+        abort(404)
 
 
 @app.get("/profile")

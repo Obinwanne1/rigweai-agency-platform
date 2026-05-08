@@ -1,15 +1,13 @@
-// Fetch wrapper — attaches JWT from localStorage, handles 401
+// Fetch wrapper — attaches JWT from memory (httpOnly cookie is primary auth), handles 401
 const API = {
   _token: null,
 
   setToken(token) {
     this._token = token;
-    if (token) localStorage.setItem("jwt", token);
-    else localStorage.removeItem("jwt");
   },
 
   getToken() {
-    return this._token || localStorage.getItem("jwt");
+    return this._token;
   },
 
   _headers(extra = {}) {
