@@ -5,6 +5,7 @@ import datetime
 from flask import Blueprint, request, jsonify, make_response, g
 from services.auth_service import verify_password, create_token, hash_password
 from middleware.auth_middleware import require_role
+from extensions import limiter
 from config import Config
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -178,6 +179,7 @@ def change_password():
 
 
 @auth_bp.post("/forgot-password")
+@limiter.limit("5 per hour")
 def forgot_password():
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()

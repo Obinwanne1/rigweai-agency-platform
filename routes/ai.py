@@ -4,6 +4,7 @@ import json
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
 from services import claude_service, file_service
+from extensions import limiter
 from config import Config
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
@@ -38,6 +39,7 @@ def get_conversation(cid):
 
 
 @ai_bp.post("/generate")
+@limiter.limit("20 per hour")
 @require_role("client", "staff", "admin")
 def generate():
     data = request.get_json(silent=True) or {}
@@ -67,6 +69,7 @@ def generate():
 
 
 @ai_bp.post("/chat")
+@limiter.limit("30 per hour")
 @require_role("client", "staff", "admin")
 def chat():
     data = request.get_json(silent=True) or {}
@@ -121,6 +124,7 @@ def chat():
 
 
 @ai_bp.post("/process-file")
+@limiter.limit("10 per hour")
 @require_role("client", "staff", "admin")
 def process_file():
     if "file" not in request.files:

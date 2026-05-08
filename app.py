@@ -3,10 +3,12 @@ from flask import Flask, send_from_directory, redirect, abort, render_template
 from flask_cors import CORS
 from jinja2 import TemplateNotFound
 from config import Config
+from extensions import limiter
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = Config.UPLOAD_MAX_BYTES
 CORS(app, supports_credentials=True, origins=Config.CORS_ORIGINS)
+limiter.init_app(app)
 
 # Register blueprints
 from routes.auth import auth_bp

@@ -8,3 +8,4 @@ python-docx
 pillow
 pytest
 python-dotenv
+flask-limiter
