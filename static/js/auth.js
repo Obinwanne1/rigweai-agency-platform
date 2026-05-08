@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("login-form");
+  if (!form) return;
   const errEl = document.getElementById("login-error");
   const btnText = document.getElementById("btn-text");
   const btnSpinner = document.getElementById("btn-spinner");
@@ -16,7 +17,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const data = await API.post("/api/auth/login", { email, password });
       API.setToken(data.token);
-      // Route by role
+      // Force password change on first login
+      if (data.user.must_change_password) {
+        window.location.href = "/profile?force=1";
+        return;
+      }
       const role = data.user.role;
       if (role === "admin") window.location.href = "/admin/dashboard";
       else if (role === "staff") window.location.href = "/staff/dashboard";

@@ -80,6 +80,46 @@ def notify_new_request(client_name: str, req_type: str, prompt: str,
     send_async(notify_emails, subject, html)
 
 
+def send_password_reset(to_email: str, name: str, token: str) -> bool:
+    """Send password reset email. Returns True if sent, False if SMTP not configured."""
+    if not _is_configured():
+        return False
+    from config import Config
+    reset_url = f"http://localhost:{Config.PORT}/reset-password?token={token}"
+    subject = "[RigweAI] Reset your password"
+    html = f"""
+    <div style="font-family:sans-serif; max-width:560px; margin:0 auto;">
+      <div style="background:#407E3C; padding:20px 24px; border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff; margin:0; font-size:1.1rem;">Password Reset Request</h2>
+      </div>
+      <div style="background:#f9f9f5; border:1px solid #d4d9c0; border-top:none;
+                  border-radius:0 0 8px 8px; padding:24px;">
+        <p style="font-size:0.9rem; color:#333;">Hi {name},</p>
+        <p style="font-size:0.9rem; color:#333; line-height:1.6;">
+          We received a request to reset your RigweAI Agency password.
+          Click the button below to set a new password. This link expires in <strong>1 hour</strong>.
+        </p>
+        <div style="margin:24px 0;">
+          <a href="{reset_url}"
+             style="background:#407E3C; color:#fff; padding:12px 24px;
+                    border-radius:6px; text-decoration:none; font-size:0.9rem; font-weight:600;">
+            Reset Password →
+          </a>
+        </div>
+        <p style="font-size:0.82rem; color:#888; line-height:1.6;">
+          If you didn't request this, ignore this email — your password won't change.<br>
+          Link: {reset_url}
+        </p>
+      </div>
+      <p style="font-size:0.75rem; color:#999; margin-top:12px; text-align:center;">
+        RigweAI Agency Platform
+      </p>
+    </div>
+    """
+    send_async([to_email], subject, html)
+    return True
+
+
 def notify_request_completed(client_email: str, client_name: str,
                                req_type: str, request_id: int) -> None:
     subject = f"[RigweAI] Your {req_type} request #{request_id} is ready"

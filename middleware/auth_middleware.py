@@ -33,7 +33,7 @@ def require_role(*roles):
             conn = sqlite3.connect(Config.DB_PATH)
             conn.row_factory = sqlite3.Row
             row = conn.execute(
-                "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
+                "SELECT id, email, name, role, is_active, must_change_password FROM users WHERE id = ?",
                 (int(payload["sub"]),),
             ).fetchone()
             conn.close()

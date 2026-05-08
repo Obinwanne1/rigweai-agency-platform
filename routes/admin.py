@@ -64,7 +64,7 @@ def create_user():
     conn = db()
     try:
         cur = conn.execute(
-            "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (email, password_hash, name, role, must_change_password) VALUES (?, ?, ?, ?, 1)",
             (email, hash_password(password), name, role),
         )
         conn.commit()
@@ -95,6 +95,7 @@ def update_user(uid):
             fields.append("is_active=?"); vals.append(1 if data["is_active"] else 0)
         if "password" in data and data["password"]:
             fields.append("password_hash=?"); vals.append(hash_password(data["password"]))
+            fields.append("must_change_password=?"); vals.append(1)
 
         if fields:
             vals.append(uid)

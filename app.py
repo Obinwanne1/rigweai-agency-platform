@@ -78,5 +78,11 @@ def forgot_password_page():
     return render_template("forgot-password.html")
 
 
+@app.get("/reset-password")
+def reset_password_page():
+    from flask import render_template
+    return render_template("reset-password.html")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=Config.PORT, debug=Config.DEBUG)

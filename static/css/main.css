@@ -384,6 +384,53 @@ tr:hover td { background: #f9f9f5; }
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Password field with eye toggle ── */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrap .form-input { padding-right: 42px; }
+
+.btn-eye {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-eye:hover { color: var(--primary); }
+
+/* ── Force-change banner ── */
+.force-change-banner {
+  background: #fff8dc;
+  border: 1px solid #f0c040;
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  color: #7a5800;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+body.dark .force-change-banner { background: #3a2e00; border-color: #7a6000; color: #f0c040; }
+
+/* ── Password strength indicator ── */
+.pw-strength { margin-top: 6px; font-size: 0.78rem; }
+.pw-strength span { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.pw-strength .weak  { background: #fde8e8; color: #c0392b; }
+.pw-strength .fair  { background: #fff3dc; color: #a06000; }
+.pw-strength .good  { background: #dcf0e5; color: #1a7a40; }
+.pw-strength .strong { background: #d4edda; color: #155724; }
+
 /* ── Dark mode toggle ── */
 .btn-dark-toggle {
   background: none;
