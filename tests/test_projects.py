@@ -217,3 +217,26 @@ def test_staff_only_sees_own_projects(client, tmp_db):
     projects = r.get_json()
     assert len(projects) == 1
     assert projects[0]["title"] == "Staff1 Project"
+
+
+# ── Staff permission bypass fix ────────────────────────────────────────
+
+def test_staff_cannot_update_request_without_project(client, tmp_db):
+    """Staff must not update service_requests with no project_id (bypass fix)."""
+    ids = _make_users(tmp_db)
+
+    conn = sqlite3.connect(tmp_db)
+    conn.execute(
+        "INSERT INTO service_requests (client_id, type, prompt) VALUES (?,?,?)",
+        (ids["client1@test.com"], "content", "Do something"),
+    )
+    rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    r = _login(client, "staff1@test.com", "pass")
+    tok = r.get_json()["token"]
+    resp = client.patch(f"/api/staff/requests/{rid}",
+                        json={"status": "completed"},
+                        headers={"Authorization": f"Bearer {tok}"})
+    assert resp.status_code == 403
