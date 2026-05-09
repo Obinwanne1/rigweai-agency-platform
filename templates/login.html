@@ -36,19 +36,7 @@
     </div>
   </div>
 </div>
-<script>
-function toggleEye(inputId, btnId) {
-  const input = document.getElementById(inputId);
-  const btn = document.getElementById(btnId);
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-  }
-}
-</script>
+<script src="/static/js/ui-utils.js"></script>
 <script src="/static/js/api.js"></script>
 <script src="/static/js/auth.js"></script>
 </body>
