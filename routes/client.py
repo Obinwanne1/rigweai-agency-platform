@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
 from services import email_service
-from services.db import get_db, project_members, VALID_STATUSES
+from services.db import get_db, bulk_project_members, VALID_STATUSES
 from config import Config
 
 client_bp = Blueprint("client", __name__, url_prefix="/api/client")
@@ -11,20 +11,28 @@ client_bp = Blueprint("client", __name__, url_prefix="/api/client")
 @require_role("client", "admin", "staff")
 def my_projects():
     conn = get_db()
-    uid = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
+    # Only admin may supply client_id override — staff see only their own clients via project membership
+    if g.user["role"] == "client":
+        uid = g.user["id"]
+    elif g.user["role"] == "admin":
+        raw = request.args.get("client_id")
+        uid = int(raw) if raw and raw.isdigit() else g.user["id"]
+    else:
+        uid = g.user["id"]
+
     rows = conn.execute("""
-        SELECT DISTINCT p.*
+        SELECT DISTINCT p.id, p.client_id, p.title, p.status, p.created_at, p.updated_at
         FROM projects p
         JOIN project_members pm ON pm.project_id = p.id
         WHERE pm.user_id = ? AND pm.role = 'client'
         ORDER BY p.created_at DESC
+        LIMIT 200
     """, (uid,)).fetchall()
-    result = []
-    for r in rows:
-        p = dict(r)
-        p["members"] = project_members(conn, p["id"])
-        result.append(p)
-    return jsonify(result)
+    projects = [dict(r) for r in rows]
+    members_map = bulk_project_members(conn, [p["id"] for p in projects])
+    for p in projects:
+        p["members"] = members_map.get(p["id"], [])
+    return jsonify(projects)
 
 
 @client_bp.patch("/projects/<int:pid>/status")
@@ -55,7 +63,15 @@ def update_project_status(pid):
 @require_role("client", "admin", "staff")
 def my_requests():
     conn = get_db()
-    client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
+    # Only admin may override client_id
+    if g.user["role"] == "client":
+        client_id = g.user["id"]
+    elif g.user["role"] == "admin":
+        raw = request.args.get("client_id")
+        client_id = int(raw) if raw and raw.isdigit() else g.user["id"]
+    else:
+        client_id = g.user["id"]
+
     rows = conn.execute(
         "SELECT * FROM service_requests WHERE client_id=? ORDER BY created_at DESC LIMIT 50",
         (client_id,),
@@ -109,9 +125,16 @@ def create_request():
 @require_role("client", "admin")
 def list_conversations():
     conn = get_db()
-    client_id = g.user["id"] if g.user["role"] == "client" else request.args.get("client_id", g.user["id"])
+    # Only admin may override client_id
+    if g.user["role"] == "client":
+        client_id = g.user["id"]
+    else:
+        raw = request.args.get("client_id")
+        client_id = int(raw) if raw and raw.isdigit() else g.user["id"]
+
     rows = conn.execute(
-        "SELECT id, title, created_at, updated_at FROM conversations WHERE client_id=? ORDER BY updated_at DESC",
+        "SELECT id, title, created_at, updated_at FROM conversations "
+        "WHERE client_id=? ORDER BY updated_at DESC LIMIT 100",
         (client_id,),
     ).fetchall()
     return jsonify([dict(r) for r in rows])

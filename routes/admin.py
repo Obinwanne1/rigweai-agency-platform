@@ -1,9 +1,13 @@
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
 from services.auth_service import hash_password
-from services.db import get_db, project_members
+from services.db import get_db, bulk_project_members
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
+
+_VALID_USER_FIELDS = {"name", "role", "is_active", "password"}
+_VALID_PROJECT_FIELDS = {"title", "description", "status"}
+_VALID_STATUSES = ("active", "assigned", "work_in_progress", "completed", "paused", "cancelled")
 
 
 # ── Stats ──────────────────────────────────────────────────────────────
@@ -35,7 +39,7 @@ def stats():
 @require_role("admin", "staff")
 def list_users():
     rows = get_db().execute(
-        "SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC"
+        "SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 500"
     ).fetchall()
     return jsonify([dict(r) for r in rows])
 
@@ -75,9 +79,10 @@ def update_user(uid):
     if not conn.execute("SELECT id FROM users WHERE id=?", (uid,)).fetchone():
         return jsonify({"error": "User not found"}), 404
 
+    # Explicit field mapping — never interpolate arbitrary keys
     fields, vals = [], []
     if "name" in data:
-        fields.append("name=?"); vals.append(data["name"].strip())
+        fields.append("name=?"); vals.append(str(data["name"]).strip())
     if "role" in data and data["role"] in ("admin", "staff", "client"):
         fields.append("role=?"); vals.append(data["role"])
     if "is_active" in data:
@@ -110,17 +115,19 @@ def delete_user(uid):
 def list_projects():
     conn = get_db()
     rows = conn.execute("""
-        SELECT p.*, c.name as client_name, c.email as client_email
+        SELECT p.id, p.client_id, p.title, p.description, p.status,
+               p.created_at, p.updated_at,
+               c.name as client_name, c.email as client_email
         FROM projects p
         LEFT JOIN users c ON c.id = p.client_id
         ORDER BY p.created_at DESC
+        LIMIT 200
     """).fetchall()
-    result = []
-    for r in rows:
-        p = dict(r)
-        p["members"] = project_members(conn, p["id"])
-        result.append(p)
-    return jsonify(result)
+    projects = [dict(r) for r in rows]
+    members_map = bulk_project_members(conn, [p["id"] for p in projects])
+    for p in projects:
+        p["members"] = members_map.get(p["id"], [])
+    return jsonify(projects)
 
 
 @admin_bp.post("/projects")
@@ -165,13 +172,13 @@ def update_project(pid):
     if not conn.execute("SELECT id FROM projects WHERE id=?", (pid,)).fetchone():
         return jsonify({"error": "Not found"}), 404
 
-    valid_statuses = ("active", "assigned", "work_in_progress", "completed", "paused", "cancelled")
+    # Explicit field mapping — no user-key interpolation
     fields, vals = [], []
     if "title" in data:
-        fields.append("title=?"); vals.append(data["title"])
+        fields.append("title=?"); vals.append(str(data["title"]))
     if "description" in data:
-        fields.append("description=?"); vals.append(data["description"])
-    if "status" in data and data["status"] in valid_statuses:
+        fields.append("description=?"); vals.append(str(data["description"]))
+    if "status" in data and data["status"] in _VALID_STATUSES:
         fields.append("status=?"); vals.append(data["status"])
 
     if fields:

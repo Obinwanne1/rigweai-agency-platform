@@ -3,10 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+_jwt_secret = os.getenv("JWT_SECRET", "")
+if not _jwt_secret:
+    raise ValueError("JWT_SECRET env var must be set — add it to .env")
+
 
 class Config:
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-    JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
+    JWT_SECRET = _jwt_secret
     JWT_EXPIRY_HOURS = 24
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
     PORT = int(os.getenv("PORT", 5000))
@@ -16,6 +20,7 @@ class Config:
     ALLOWED_EXTENSIONS = {"pdf", "txt", "docx", "png", "jpg", "jpeg", "csv"}
     CLAUDE_MODEL = "claude-sonnet-4-6"
     DEBUG = FLASK_ENV == "development"
+    BASE_URL = os.getenv("BASE_URL", f"http://localhost:{os.getenv('PORT', 5000)}")
     # SMTP (optional — leave blank to disable email)
     SMTP_HOST = os.getenv("SMTP_HOST", "")
     SMTP_PORT = int(os.getenv("SMTP_PORT", 587))

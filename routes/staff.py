@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
 from services import email_service
-from services.db import get_db, project_members, VALID_STATUSES
+from services.db import get_db, bulk_project_members, VALID_STATUSES
 
 staff_bp = Blueprint("staff", __name__, url_prefix="/api/staff")
+
+_VALID_REQUEST_STATUSES = ("pending", "in_progress", "completed", "failed")
 
 
 @staff_bp.get("/projects")
@@ -12,26 +14,30 @@ def my_projects():
     conn = get_db()
     if g.user["role"] == "admin":
         rows = conn.execute("""
-            SELECT p.*, c.name as client_name
+            SELECT p.id, p.client_id, p.title, p.status, p.created_at, p.updated_at,
+                   c.name as client_name
             FROM projects p
             LEFT JOIN users c ON c.id = p.client_id
             ORDER BY p.created_at DESC
+            LIMIT 200
         """).fetchall()
     else:
         rows = conn.execute("""
-            SELECT DISTINCT p.*, c.name as client_name
+            SELECT DISTINCT p.id, p.client_id, p.title, p.status, p.created_at, p.updated_at,
+                            c.name as client_name
             FROM projects p
             LEFT JOIN users c ON c.id = p.client_id
             JOIN project_members pm ON pm.project_id = p.id
             WHERE pm.user_id = ? AND pm.role = 'staff'
             ORDER BY p.created_at DESC
+            LIMIT 200
         """, (g.user["id"],)).fetchall()
-    result = []
-    for r in rows:
-        p = dict(r)
-        p["members"] = project_members(conn, p["id"])
-        result.append(p)
-    return jsonify(result)
+
+    projects = [dict(r) for r in rows]
+    members_map = bulk_project_members(conn, [p["id"] for p in projects])
+    for p in projects:
+        p["members"] = members_map.get(p["id"], [])
+    return jsonify(projects)
 
 
 @staff_bp.patch("/projects/<int:pid>/status")
@@ -69,7 +75,8 @@ def project_requests(pid):
         ).fetchone():
             return jsonify({"error": "Forbidden"}), 403
     rows = conn.execute(
-        "SELECT * FROM service_requests WHERE project_id=? ORDER BY created_at DESC", (pid,)
+        "SELECT * FROM service_requests WHERE project_id=? ORDER BY created_at DESC LIMIT 100",
+        (pid,),
     ).fetchall()
     return jsonify([dict(r) for r in rows])
 
@@ -92,11 +99,13 @@ def update_request(rid):
             return jsonify({"error": "Forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
+
+    # Explicit field mapping — no user-key interpolation
     fields, vals = [], []
-    if "status" in data and data["status"] in ("pending", "in_progress", "completed", "failed"):
+    if "status" in data and data["status"] in _VALID_REQUEST_STATUSES:
         fields.append("status=?"); vals.append(data["status"])
     if "output_text" in data:
-        fields.append("output_text=?"); vals.append(data["output_text"])
+        fields.append("output_text=?"); vals.append(str(data["output_text"]))
 
     if fields:
         vals.append(rid)
@@ -106,7 +115,8 @@ def update_request(rid):
     client_row = None
     if data.get("status") == "completed":
         client_row = conn.execute(
-            "SELECT u.email, u.name FROM users u JOIN service_requests sr ON sr.client_id = u.id WHERE sr.id=?",
+            "SELECT u.email, u.name FROM users u "
+            "JOIN service_requests sr ON sr.client_id = u.id WHERE sr.id=?",
             (rid,),
         ).fetchone()
         client_row = dict(client_row) if client_row else None
