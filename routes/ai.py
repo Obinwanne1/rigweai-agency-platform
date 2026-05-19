@@ -1,11 +1,14 @@
 import os
 import json
+import logging
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_role
 from services import claude_service, file_service
 from services.db import get_db
 from extensions import limiter
 from config import Config
+
+log = logging.getLogger(__name__)
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
 
@@ -30,8 +33,8 @@ def get_conversation(cid):
 
 
 @ai_bp.post("/generate")
-@limiter.limit("20 per hour")
 @require_role("client", "staff", "admin")
+@limiter.limit("20 per hour")
 def generate():
     data = request.get_json(silent=True) or {}
     prompt = (data.get("prompt") or "").strip()
@@ -46,8 +49,9 @@ def generate():
 
     try:
         output = claude_service.generate_content(prompt, context)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        log.exception("generate_content failed for user %s", g.user["id"])
+        return jsonify({"error": "AI service error. Please try again."}), 500
 
     conn = get_db()
     conn.execute(
@@ -59,8 +63,8 @@ def generate():
 
 
 @ai_bp.post("/chat")
-@limiter.limit("30 per hour")
 @require_role("client", "staff", "admin")
+@limiter.limit("30 per hour")
 def chat():
     data = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
@@ -73,27 +77,27 @@ def chat():
 
     conn = get_db()
     history = []
+    conv_row = None
     if conversation_id:
-        row = conn.execute(
-            "SELECT * FROM conversations WHERE id=? AND client_id=?",
+        conv_row = conn.execute(
+            "SELECT id, messages FROM conversations WHERE id=? AND client_id=?",
             (conversation_id, g.user["id"]),
         ).fetchone()
-        if row:
-            history = json.loads(row["messages"])
+        if conv_row:
+            history = json.loads(conv_row["messages"])
 
-    history = history[-38:]  # cap before API call — leaves room for user+assistant
+    history = history[-38:]
 
     try:
         reply = claude_service.chat(history, message)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        log.exception("chat failed for user %s", g.user["id"])
+        return jsonify({"error": "AI service error. Please try again."}), 500
 
     history.append({"role": "user", "content": message})
     history.append({"role": "assistant", "content": reply})
 
-    if conversation_id and conn.execute(
-        "SELECT id FROM conversations WHERE id=? AND client_id=?", (conversation_id, g.user["id"])
-    ).fetchone():
+    if conv_row:
         conn.execute(
             "UPDATE conversations SET messages=?, updated_at=datetime('now') WHERE id=?",
             (json.dumps(history), conversation_id),
@@ -111,8 +115,8 @@ def chat():
 
 
 @ai_bp.post("/process-file")
-@limiter.limit("10 per hour")
 @require_role("client", "staff", "admin")
+@limiter.limit("10 per hour")
 def process_file():
     if "file" not in request.files:
         return jsonify({"error": "file required"}), 400
@@ -142,14 +146,15 @@ def process_file():
     try:
         text, img_b64, media_type = file_service.extract_text(file_info)
         output = claude_service.analyze_file(text, instruction, img_b64, media_type)
-    except Exception as e:
+    except Exception:
+        log.exception("process_file failed for user %s file %s", g.user["id"], file_id)
         conn.execute("DELETE FROM files WHERE id=?", (file_id,))
         conn.commit()
         try:
             os.remove(file_info["path"])
         except OSError:
             pass
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "File processing failed. Please try again."}), 500
 
     conn.execute(
         "INSERT INTO service_requests (client_id, type, prompt, file_id, status, output_text) VALUES (?,?,?,?,?,?)",

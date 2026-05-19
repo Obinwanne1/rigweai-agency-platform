@@ -1,13 +1,17 @@
+import threading
 import anthropic
 from config import Config
 
 _client = None
+_client_lock = threading.Lock()
 
 
 def _get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+        with _client_lock:
+            if _client is None:
+                _client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
     return _client
 
 
