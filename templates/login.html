@@ -4,35 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In — RigweAI Agency</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
 <div class="login-page">
-  <div class="login-card">
-    <div class="login-logo">
-      <h1>RigweAI Agency</h1>
-      <p>Sign in to your account</p>
+  <!-- Left brand panel (visible ≥900px) -->
+  <div class="login-panel">
+    <div class="login-panel-brand">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:32px;">
+        <div style="width:44px; height:44px; background:rgba(255,255,255,0.18); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:700; color:#fff; backdrop-filter:blur(4px);">R</div>
+        <span style="font-size:1.2rem; font-weight:700; color:#fff; letter-spacing:-0.01em;">RigweAI</span>
+      </div>
+      <h2>Your AI Agency<br>Platform</h2>
+      <p>Manage clients, projects, and AI-powered services from one unified workspace.</p>
     </div>
-    <div class="login-error" id="login-error"></div>
-    <form id="login-form">
-      <div class="form-group">
-        <label class="form-label" for="email">Email</label>
-        <input class="form-input" type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+    <div class="login-panel-features">
+      <div class="feature"><div class="feature-icon">🤖</div><span>AI content generation &amp; chat</span></div>
+      <div class="feature"><div class="feature-icon">📁</div><span>Project &amp; client management</span></div>
+      <div class="feature"><div class="feature-icon">📄</div><span>Document &amp; file processing</span></div>
+      <div class="feature"><div class="feature-icon">🔒</div><span>Role-based secure access</span></div>
+    </div>
+  </div>
+
+  <!-- Right form area -->
+  <div class="login-form-area">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">R</div>
+        <h1>Welcome back</h1>
+        <p>Sign in to your account</p>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="password">Password</label>
-        <div class="password-wrap">
-          <input class="form-input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
-          <button type="button" class="btn-eye" onclick="toggleEye('password','eye-login')" id="eye-login" title="Show/hide password">👁</button>
+      <div class="login-error" id="login-error"></div>
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <input class="form-input" type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
         </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="password-wrap">
+            <input class="form-input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="btn-eye" onclick="toggleEye('password','eye-login')" id="eye-login" title="Show/hide password">👁</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:11px 16px; margin-top:4px; font-size:0.9rem;">
+          <span id="btn-spinner" class="spinner hidden"></span>
+          <span id="btn-text">Sign In</span>
+        </button>
+      </form>
+      <div style="text-align:center; margin-top:20px;">
+        <a href="/forgot-password" style="font-size:0.83rem; color:var(--primary); text-decoration:none; font-weight:500;">Forgot your password?</a>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:11px 16px; margin-top:8px;">
-        <span id="btn-spinner" class="spinner hidden"></span>
-        <span id="btn-text">Sign In</span>
-      </button>
-    </form>
-    <div style="text-align:center; margin-top:16px;">
-      <a href="/forgot-password" style="font-size:0.85rem; color:#448440; text-decoration:none;">Forgot password?</a>
     </div>
   </div>
 </div>

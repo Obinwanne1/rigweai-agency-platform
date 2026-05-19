@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}RigweAI Agency{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="/static/css/main.css">
   {% block head %}{% endblock %}
 </head>
@@ -11,17 +13,27 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      RigweAI<br>
-      <span>Agency Platform</span>
+      <div class="sidebar-logo-mark">
+        <div class="sidebar-logo-icon">R</div>
+        <div class="sidebar-logo-text">RigweAI</div>
+      </div>
+      <div class="sidebar-logo-sub">Agency Platform</div>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav">
       {% block sidebar %}{% endblock %}
     </nav>
     <div class="sidebar-footer">
-      <strong id="nav-user-name">—</strong>
-      <span id="nav-user-role"></span>
-      <a href="/profile" style="display:block; font-size:0.8rem; color:rgba(255,255,255,0.7); margin-top:6px; text-decoration:none;">⚙ Change Password</a>
-      <button class="btn-logout" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-user">
+        <div class="sidebar-avatar" id="nav-user-avatar">—</div>
+        <div class="sidebar-footer-info">
+          <strong id="nav-user-name">—</strong>
+          <span id="nav-user-role"></span>
+        </div>
+      </div>
+      <div class="sidebar-footer-links">
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+        <a href="/profile" class="sidebar-settings-link" title="Settings">⚙</a>
+      </div>
     </div>
   </aside>
 

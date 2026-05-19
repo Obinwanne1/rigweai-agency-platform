@@ -3,6 +3,8 @@
     const user = await API.get("/api/auth/me");
     document.getElementById("nav-user-name").textContent = user.name;
     document.getElementById("nav-user-role").textContent = user.role;
+    const avatarEl = document.getElementById("nav-user-avatar");
+    if (avatarEl) avatarEl.textContent = user.name ? user.name.charAt(0).toUpperCase() : "?";
 
     const path = window.location.pathname;
     const a = (href) => `class="nav-link${path === href ? ' active' : ''}"`;
